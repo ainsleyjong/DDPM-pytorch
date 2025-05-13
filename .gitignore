@@ -1,0 +1,11 @@
+results
+__pycache__
+models
+*.out
+comet_ml*
+data*
+# Ignore unneeded scripts and folders
+__pycache__/
+artwork-cover/
+others/
+comet_upload.py

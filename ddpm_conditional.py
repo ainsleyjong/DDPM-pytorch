@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import argparse
 import logging
+from pathlib import Path
 from tqdm import tqdm
 from torch import optim
 from utils import *
@@ -71,6 +72,19 @@ def train(args):
     dataloader = get_data(args)
     model = UNet_conditional(num_classes=args.num_classes).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+    if args.load_checkpoint is not None:
+      if Path(f"{args.load_checkpoint}/ckpt.pt").is_file():
+        checkpoint = torch.load(f"{args.load_checkpoint}/ckpt.pt")
+        #,                map_location = lambda storage, loc: storage.cuda(torch.cuda.current_device()))
+        model.load_state_dict(checkpoint["model"])
+        print("loading checkpoint")
+        #optimizer.load_state_dict(checkpoint["optimizer"]) # This one causes problems. Don't know why
+        #scaler.load_state_dict(checkpoint["scaler"]) # No point loading it if optimizer state is not loaded
+      else:
+          print(f"cannot find checkpoint file {args.load_checkpoint}/ckpt.pt")
+
+    else:
+        print("checkpoint is None")
     mse = nn.MSELoss()
     diffusion = Diffusion(img_size=args.image_size, device=device)
     logger = SummaryWriter(os.path.join("runs", args.run_name))
@@ -132,6 +146,8 @@ def setup():
                         help="Learning rate of the model (e.g., 0.0003)")
     parser.add_argument("--run-name",type=str,default="DDPM_Conditional",
                         help="Name for the experiment run in Comet ML")
+    parser.add_argument("--load-checkpoint",type=str,
+                        help="Path to the model checkpoint directory or file (e.g., models/conditional_ema_ckpt.pt)")
     parser.add_argument("--offline",action=argparse.BooleanOptionalAction,
                     help="Flag to use online Comet ML logging")
     args = parser.parse_args()
